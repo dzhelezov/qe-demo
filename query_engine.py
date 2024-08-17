@@ -109,13 +109,22 @@ class DistributedQueryEngine:
     def __init__(self, nodes):
         self.nodes = nodes
         self.con = duckdb.connect(':memory:')
+        # Assume each node has a specific block range (for demo purposes)
+        self.node_ranges = {
+            nodes[0]: (1, 500000),
+            nodes[1]: (500001, 1000000)
+        }
 
     def execute_query(self, sql_query):
         parser = QueryParser()
         query_info = parser.parse(sql_query).get_query_info()
         
         try:
-            data = self.fetch_data(query_info['from_block'], query_info['to_block'], query_info['account'])
+            # Plan the query
+            plan = self.plan_query(query_info)
+            
+            # Execute the plan
+            data = self.execute_plan(plan)
             
             if data.empty:
                 return pd.DataFrame()  # Return empty DataFrame if no data
@@ -127,26 +136,58 @@ class DistributedQueryEngine:
             print(f"Error executing query: {str(e)}")
             return pd.DataFrame()  # Return empty DataFrame on error
 
-    def fetch_data(self, from_block, to_block, account=None):
+    def plan_query(self, query_info):
+        plan = []
+        for node, (start, end) in self.node_ranges.items():
+            if query_info['from_block'] <= end and query_info['to_block'] >= start:
+                node_from = max(query_info['from_block'], start)
+                node_to = min(query_info['to_block'], end)
+                plan.append({
+                    'node': node,
+                    'from_block': node_from,
+                    'to_block': node_to,
+                    'account': query_info['account']
+                })
+        return plan
+
+    def execute_plan(self, plan):
         all_data = []
-        for node in self.nodes:
-            params = {'from_block': from_block, 'to_block': to_block}
-            if account:
-                params['account'] = account
+        for step in plan:
             try:
-                response = requests.get(f"{node}/query", params=params, timeout=10)
-                response.raise_for_status()  # Raise an exception for bad status codes
+                params = {
+                    'from_block': step['from_block'],
+                    'to_block': step['to_block']
+                }
+                if step['account']:
+                    params['account'] = step['account']
+                
+                response = requests.get(f"{step['node']}/query", params=params, timeout=10)
+                response.raise_for_status()
                 data = response.json()
                 if isinstance(data, list):
                     all_data.extend(data)
                 else:
-                    print(f"Unexpected response format from node {node}: {data}")
+                    print(f"Unexpected response format from node {step['node']}: {data}")
             except RequestException as e:
-                print(f"Error fetching data from node {node}: {str(e)}")
+                print(f"Error fetching data from node {step['node']}: {str(e)}")
             except ValueError as e:
-                print(f"Error parsing JSON from node {node}: {str(e)}")
+                print(f"Error parsing JSON from node {step['node']}: {str(e)}")
         
         if not all_data:
             print("No data retrieved from any node")
         
         return pd.DataFrame(all_data)
+
+    def explain_plan(self, sql_query):
+        parser = QueryParser()
+        query_info = parser.parse(sql_query).get_query_info()
+        plan = self.plan_query(query_info)
+        
+        explanation = ["Query Execution Plan:"]
+        for step in plan:
+            explanation.append(f"- Scan node {step['node']}:")
+            explanation.append(f"  Range: blocks {step['from_block']} to {step['to_block']}")
+            if step['account']:
+                explanation.append(f"  Predicate: account = {step['account']}")
+        
+        return "\n".join(explanation)

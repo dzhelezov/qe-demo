@@ -20,6 +20,21 @@
                     }
                 });
             });
+
+            $('#explainButton').click(function() {
+                $('#result').text('Explaining query plan...');
+                $.ajax({
+                    url: '/explain_query',
+                    method: 'POST',
+                    data: { query: $('#queryInput').val() },
+                    success: function(response) {
+                        $('#result').text(response.explanation);
+                    },
+                    error: function() {
+                        $('#result').text('An error occurred while explaining the query plan.');
+                    }
+                });
+            });
         });
     </script>
 </head>
@@ -29,13 +44,14 @@
         <textarea id="queryInput" rows="4" cols="50">
 SELECT account, SUM(value) as total_value
 FROM temp_table
-WHERE blockHeight >= 1000 AND blockHeight <= 50000
+WHERE blockHeight >= 1000 AND blockHeight <= 750000
 GROUP BY account
 ORDER BY total_value DESC
 LIMIT 5
         </textarea>
         <br>
         <input type="submit" value="Execute Query">
+        <button type="button" id="explainButton">Explain Plan</button>
     </form>
     <pre id="result"></pre>
 </body>
