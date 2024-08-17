@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Distributed SQL Query Engine</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            $('#queryForm').submit(function(e) {
+                e.preventDefault();
+                $('#result').text('Executing query...');
+                $.ajax({
+                    url: '/execute_query',
+                    method: 'POST',
+                    data: { query: $('#queryInput').val() },
+                    success: function(response) {
+                        $('#result').text(JSON.stringify(response, null, 2));
+                    },
+                    error: function() {
+                        $('#result').text('An error occurred while executing the query.');
+                    }
+                });
+            });
+        });
+    </script>
+</head>
+<body>
+    <h1>Distributed SQL Query Engine</h1>
+    <form id="queryForm">
+        <textarea id="queryInput" rows="4" cols="50">
+SELECT account, SUM(value) as total_value
+FROM temp_table
+WHERE blockHeight >= 1000 AND blockHeight <= 50000
+GROUP BY account
+ORDER BY total_value DESC
+LIMIT 5
+        </textarea>
+        <br>
+        <input type="submit" value="Execute Query">
+    </form>
+    <pre id="result"></pre>
+</body>
+</html>
