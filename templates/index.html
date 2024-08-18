@@ -42,11 +42,11 @@
     <h1>Distributed Blockchain Query Engine</h1>
     <form id="queryForm">
         <textarea id="queryInput" rows="6" cols="80">
-SELECT l.address, COUNT(*) as event_count
+SELECT l.address, COUNT(*) as event_count, MIN(l.blockHeight) as low, MAX(l.blockHeight) as high
 FROM logs l
 JOIN transactions t ON l.transactionId = t.id
 WHERE l.blockHeight >= 10000 AND l.blockHeight <= 90000
-  AND l.topics3 = '0xb37630ce726b7edc2839dd670cdd9f7bb05693ae34cf84b59bffd7a0eab7a84b'
+    AND l.topics3 = '0xb37630ce726b7edc2839dd670cdd9f7bb05693ae34cf84b59bffd7a0eab7a84b'
 GROUP BY l.address
 ORDER BY event_count DESC
 LIMIT 10
