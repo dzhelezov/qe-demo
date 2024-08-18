@@ -1,5 +1,9 @@
 flask
+flask-cors
 pandas
+numpy
 duckdb
 sqlparse
 requests
+pyarrow
+fastparquet

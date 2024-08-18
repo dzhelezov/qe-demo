@@ -4,7 +4,7 @@
 SHELL := /bin/bash
 
 # Define commands
-.PHONY: run stop
+.PHONY: run stop kill
 
 # Run the demo
 run:
@@ -18,9 +18,16 @@ stop:
 	@lsof -ti:5000,5001,8000 | xargs kill -9 || true
 	@echo "Demo stopped."
 
+# Kill all related Python processes
+kill:
+	@echo "Killing all related Python processes..."
+	@chmod +x kill_python_processes.sh
+	@./kill_python_processes.sh
+
 # Help command
 help:
 	@echo "Available commands:"
-	@echo "  make run  - Run the demo"
-	@echo "  make stop - Stop the demo"
-	@echo "  make help - Show this help message"
+	@echo "  make run   - Run the demo"
+	@echo "  make stop  - Stop the demo (only kills processes on ports 5000, 5001, 8000)"
+	@echo "  make kill  - Kill all related Python processes"
+	@echo "  make help  - Show this help message"
